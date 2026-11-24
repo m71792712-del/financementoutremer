@@ -1,7 +1,7 @@
 import type { Metadata, Viewport } from 'next';
 import type { ReactNode } from 'react';
 import { Fraunces, Plus_Jakarta_Sans } from 'next/font/google';
-import { DemoBanner } from '@/components/layout/DemoBanner';
+
 import { APP_NAME } from '@/lib/config';
 import { getT } from '@/lib/i18n';
 import { I18nProvider } from '@/lib/i18n/provider';
@@ -12,7 +12,7 @@ const display = Fraunces({ subsets: ['latin'], variable: '--font-display', displ
 
 export const metadata: Metadata = {
   title: { default: APP_NAME, template: `%s · ${APP_NAME}` },
-  description: 'Plateforme universitaire de démonstration de financement des projets en outre-mer (données fictives uniquement).',
+  description: 'Plateforme universitaire de financement des projets en outre-mer.',
 };
 export const viewport: Viewport = { themeColor: '#081f44', width: 'device-width', initialScale: 1 };
 
@@ -26,7 +26,7 @@ export default async function RootLayout({ children }: { children: ReactNode }) 
           <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded focus:bg-white focus:p-2">
             {t('nav.skip')}
           </a>
-          <DemoBanner />
+          
           {children}
         </I18nProvider>
       </body>
