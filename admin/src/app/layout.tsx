@@ -20,7 +20,9 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="fr" className={`${sans.variable} ${display.variable}`}>
       <body className="min-h-screen">
-        
+        <div className="bg-navy-950 px-4 py-2 text-center text-[11px] font-medium tracking-wide text-amber-200 sm:text-xs">
+          Projet universitaire — données fictives uniquement. Aucune décision de financement réelle.
+        </div>
         {children}
       </body>
     </html>
