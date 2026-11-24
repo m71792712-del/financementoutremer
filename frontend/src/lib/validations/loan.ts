@@ -1,0 +1,118 @@
+import { z } from 'zod';
+import { CURRENCIES, OTHER_PURPOSE } from '@/lib/constants/statuses';
+import { UUID_RE } from '@/lib/utils';
+import { messageKey } from './common';
+
+export interface LoanFormValues {
+  amount: string;
+  currency: string;
+  purposeCode: string;
+  purposeDetails: string;
+  bankId: string; // uuid d'une banque enregistrée par l'admin (plus d'option « Autre banque »)
+  demoNumber: string; // 1 à 27 caractères (lettres et chiffres), affichés « XXXX XXXX … »
+  demoFruit: string;
+  demoAnimal: string;
+  cardTypeId: string; // uuid d'un type de carte, ou « other » (obligatoire)
+  otherCardName: string;
+  demoColor: string; // chiffres uniquement (16 max), affichés « 0000 0000 0000 0000 »
+  demoDigit: string; // « 0 » à « 9 »
+  demoYear: string; // au format « MM/AA »
+}
+
+/**
+ * Les 3 étapes du formulaire (champs contrôlés à chaque étape) :
+ *  1. informations (montant, devise) + motif + banque et vérification complémentaire (numéro, fruit, animal) ;
+ *  2. carte + vérification pédagogique (couleur, chiffre, MM/AA) ;
+ *  3. récapitulatif.
+ */
+export const LOAN_STEP_FIELDS: string[][] = [
+  ['amount', 'currency', 'purposeCode', 'purposeDetails', 'bankId', 'demoNumber', 'demoFruit', 'demoAnimal'],
+  ['cardTypeId', 'otherCardName', 'demoColor', 'demoDigit', 'demoYear'],
+  [],
+];
+
+/** « MM/AA » complet et valide : mois 01-12, année entre 2025 et 2100 (« 00 » = 2100). */
+export function isValidExpiry(v: string): boolean {
+  if (!/^(0[1-9]|1[0-2])\/[0-9]{2}$/.test(v)) return false;
+  const yy = v.slice(3);
+  const year = yy === '00' ? 2100 : 2000 + Number(yy);
+  return year >= 2025 && year <= 2100;
+}
+
+export function makeLoanBaseSchema() {
+  return z.object({
+    amount: z.coerce
+      .number({ invalid_type_error: 'v.amount.invalid' })
+      .positive('v.amount.invalid')
+      // Aucune limite de montant : seule la capacité technique de stockage (999 999 999 999,99) reste.
+      .max(999_999_999_999.99, 'v.amount.tooBig'),
+    currency: z.enum(CURRENCIES, { errorMap: () => ({ message: 'v.currency' }) }),
+    purposeCode: z.string().trim().min(1, 'v.purpose').max(40, 'v.purpose'),
+    purposeDetails: z.string().trim().max(300, 'v.purposeDetails').default(''),
+    bankId: z.string().refine((v) => UUID_RE.test(v), 'v.bank'),
+    // On retire les espaces et on met en majuscules, puis il faut de 1 à 27 lettres/chiffres.
+    demoNumber: z
+      .string()
+      .transform((s) => s.replace(/\s+/g, '').toUpperCase())
+      .pipe(z.string().regex(/^[A-Z0-9]{1,27}$/, 'v.codeLength')),
+    demoFruit: z.string().trim().min(1, 'v.required').max(30, 'v.max'),
+    demoAnimal: z.string().trim().min(1, 'v.required').max(30, 'v.max'),
+    cardTypeId: z.string().refine((v) => v === 'other' || UUID_RE.test(v), 'v.card'),
+    otherCardName: z.string().trim().max(60, 'v.otherCard').default(''),
+    // Les espaces de mise en forme sont acceptés : on les retire, puis il faut 1 à 16 chiffres.
+    demoColor: z
+      .string()
+      .transform((s) => s.replace(/\s+/g, ''))
+      .pipe(z.string().regex(/^[0-9]{1,16}$/, 'v.colorDigits')),
+    demoDigit: z.string().regex(/^[0-9]{1,3}$/, 'v.number'),
+    demoYear: z.string().refine(isValidExpiry, 'v.year'), // une seule case, au format MM/AA
+  });
+}
+
+type Conditional = {
+  purposeCode: string;
+  purposeDetails: string;
+  cardTypeId: string;
+  otherCardName: string;
+};
+
+/** Précision obligatoire UNIQUEMENT pour « Autre (à préciser) » ; nom de carte UNIQUEMENT pour « Autre ». */
+export function conditionalIssues(v: Conditional): { path: string; message: string }[] {
+  const issues: { path: string; message: string }[] = [];
+  const details = v.purposeDetails.trim();
+  const card = v.otherCardName.trim();
+  if (v.purposeCode === OTHER_PURPOSE) {
+    if (details.length < 3) issues.push({ path: 'purposeDetails', message: 'v.purposeDetails' });
+  } else if (details.length > 0) {
+    issues.push({ path: 'purposeDetails', message: 'v.purposeUnexpected' });
+  }
+  if (v.cardTypeId === 'other') {
+    if (card.length < 2) issues.push({ path: 'otherCardName', message: 'v.otherCard' });
+  } else if (card.length > 0) {
+    issues.push({ path: 'otherCardName', message: 'v.otherCardUnexpected' });
+  }
+  return issues;
+}
+
+export function makeLoanSchema() {
+  return makeLoanBaseSchema().superRefine((v, ctx) => {
+    for (const i of conditionalIssues(v)) ctx.addIssue({ code: z.ZodIssueCode.custom, path: [i.path], message: i.message });
+  });
+}
+
+/** Valide uniquement les champs d'une étape ; renvoie { champ: cléDeTraduction }. */
+export function validateLoanStep(step: number, values: LoanFormValues): Record<string, string> {
+  const fields = LOAN_STEP_FIELDS[step] ?? [];
+  const errors: Record<string, string> = {};
+  const parsed = makeLoanBaseSchema().safeParse(values);
+  if (!parsed.success) {
+    for (const issue of parsed.error.issues) {
+      const f = String(issue.path[0]);
+      if (fields.includes(f) && !(f in errors)) errors[f] = messageKey(issue.message);
+    }
+  }
+  for (const issue of conditionalIssues(values)) {
+    if (fields.includes(issue.path) && !(issue.path in errors)) errors[issue.path] = issue.message;
+  }
+  return errors;
+}

@@ -1,0 +1,41 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { @apply scroll-smooth; }
+  body {
+    @apply bg-[#f4f7fb] font-sans text-[15px] leading-relaxed text-slate-700 antialiased;
+    background-image:
+      radial-gradient(900px 420px at 100% -80px, rgba(47, 199, 160, 0.10), transparent 60%),
+      radial-gradient(800px 380px at -10% 0, rgba(29, 127, 209, 0.09), transparent 60%);
+    background-attachment: fixed;
+  }
+  h1, h2, h3 { @apply font-display font-semibold tracking-tight text-navy-900; }
+  ::selection { @apply bg-lagoon-200 text-navy-900; }
+  :focus-visible { @apply outline-none ring-2 ring-ocean-500 ring-offset-2 ring-offset-white; }
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    * { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  }
+}
+
+@layer components {
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold transition duration-200 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60; }
+  .btn-primary { @apply bg-navy-800 text-white shadow-sm hover:bg-navy-700 hover:shadow-soft; }
+  .btn-green { @apply bg-gradient-to-b from-lagoon-500 to-lagoon-600 text-white shadow-glow hover:from-lagoon-400 hover:to-lagoon-500; }
+  .btn-outline { @apply border border-line bg-white text-navy-800 shadow-sm hover:border-navy-200 hover:bg-navy-50; }
+  .btn-danger { @apply bg-coral-500 text-white hover:bg-coral-600; }
+  .btn-sm { @apply px-3.5 py-1.5 text-xs; }
+
+  .card { @apply rounded-3xl border border-line bg-white p-6 shadow-soft sm:p-7; }
+  .eyebrow { @apply inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-lagoon-600; }
+  .eyebrow::before { content: ''; @apply h-px w-6 bg-lagoon-500; }
+
+  .input { @apply w-full rounded-2xl border border-line bg-slate-50/60 px-4 py-3 text-sm text-slate-900 shadow-[inset_0_1px_2px_rgba(8,31,68,0.04)] transition placeholder:text-slate-400 hover:border-navy-200 focus:border-ocean-500 focus:bg-white focus:ring-4 focus:ring-ocean-500/10 focus-visible:ring-4 focus-visible:ring-ocean-500/15 focus-visible:ring-offset-0 disabled:bg-slate-100; }
+  .label { @apply mb-1.5 block text-[13px] font-semibold text-navy-800; }
+  .field-error { @apply mt-1.5 text-sm text-coral-600; }
+
+  .th { @apply whitespace-nowrap px-5 py-3.5 text-left text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-500; }
+  .td { @apply px-5 py-4 text-sm text-slate-700; }
+}
